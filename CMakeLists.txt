@@ -1,20 +1,24 @@
-cmake_minimum_required( VERSION 3.20 )
-project( MiniMap )
+cmake_minimum_required(VERSION 3.20)
+project(MiniMap)
 
-set( PN ${PROJECT_NAME} )
+set(PN ${PROJECT_NAME})
 
-set( SDL2 "vendor/SDL2/lib/x64/SDL2")
-set( SDL2main "vendor/SDL2/lib/x64/SDL2main")
-set( GL "OpenGL32")
-set( glew "vendor/glew/lib/Release/x64/glew32")
+set(SDL2 "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SDL2/lib/x64/SDL2.lib")
+set(SDL2main "${CMAKE_CURRENT_SOURCE_DIR}/vendor/SDL2/lib/x64/SDL2main.lib")
+set(GL "OpenGL32")
+set(glew "${CMAKE_CURRENT_SOURCE_DIR}/vendor/glew/lib/Release/x64/glew32.lib")
 
-include_directories( "vendor/SDL2/include" )
-include_directories( "vendor/glew/include" )
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/vendor/SDL2/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/vendor/glew/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/headers")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-add_executable( ${PN} src/main.c)
+add_executable(${PN} src/main.c src/glutils.c src/osmloader.c)
 target_link_libraries(
     ${PN}
         ${SDL2}
         ${SDL2main}
         ${GL} 
-        ${glew} )
+        ${glew})
+
+#set(COMPILE_FLAGS ${COMPILE_FLAGS} "-g")

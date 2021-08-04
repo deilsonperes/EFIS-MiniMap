@@ -1,13 +1,2 @@
-/Debug/
-/CMakeFiles/
-/Minimap.dir/
-/.vscode/
-/x64/
-
-*.code-workspace
-*.vcxproj
-*.vcxproj.filters
-*.sln
-*.cmake
-
-CMakeCache.txt
+/.vscode
+/build
