@@ -34,7 +34,7 @@ void osmLoad(char* fileName, osm **mapData)
 		  *nameSeparator,
 		  *tagName = (char*) calloc(32, sizeof(char)),
 		  *keyStart,
-		  *valueStart ;
+		  *valueStart;
 	
 	int line = 0,
 		 tagListPos = 0,
@@ -52,7 +52,7 @@ void osmLoad(char* fileName, osm **mapData)
 		if(tagStart = strstr(lineBuffer, "<"))
 		{
 			// if next char is '/' this is a tag ending
-			if(*(tagStart+1) == '/')
+			if(tagStart[1] == '/')
 			{
 				;//printf("Tag ending: %s", lineBuffer);
 			} else {
@@ -88,11 +88,9 @@ void osmLoad(char* fileName, osm **mapData)
 	printf("Nodes: %d | Ways: %d | Relations: %d\n", ptrMapData->numNodes, ptrMapData->numWays, ptrMapData->numRelations);
 	
 	// allocate memory for structs
-	ptrMapData->nodes = (node**) malloc(sizeof(node) * ptrMapData->numNodes);
-	ptrMapData->ways = (way**) malloc(sizeof(way) * ptrMapData->numWays);
-	ptrMapData->relations = (relation**) malloc(sizeof(relation) * ptrMapData->numRelations);
-
-	system("pause");
+	ptrMapData->nodes = (node*) malloc(sizeof(node) * ptrMapData->numNodes);
+	ptrMapData->ways = (way*) malloc(sizeof(way) * ptrMapData->numWays);
+	ptrMapData->relations = (relation*) malloc(sizeof(relation) * ptrMapData->numRelations);
 	
 	int nodeCount = 0,
 		 wayCount = 0,
@@ -100,20 +98,20 @@ void osmLoad(char* fileName, osm **mapData)
 		 progCnt = 0;
 
 	rewind(osm_file);
-	fgets(lineBuffer, 512, osm_file);
+	fgets(lineBuffer, 1024, osm_file);
 	while(!feof(osm_file))
 	{		
 		if(tagStart = strstr(lineBuffer, "<"))
 		{
 			// if next char is '/' this is a tag ending
-			if(*(tagStart+1) == '/')
+			if(tagStart[1] == '/')
 			{
 				;//printf("Tag ending: %s", lineBuffer);
 			} else {
 				getTagName(tagStart, &tagName);
 				if(!strcmp(tagName, "node"))
 				{
-					if(progCnt++ == 1000)
+					if(progCnt++ == 5000)
 					{
 						progCnt = 0;
 						printf("^%c[2K\r", 27);
@@ -128,20 +126,20 @@ void osmLoad(char* fileName, osm **mapData)
 				} else
 				if(!strcmp(tagName, "relation"))
 				{
-					
+					relationCount++;
 				}
 			}
 		} else
 			printf("Broken line: %s", lineBuffer);
 		
 		// read new line here to avoid missing feof()
-		fgets(lineBuffer, 512, osm_file);
+		fgets(lineBuffer, 1024, osm_file);
 	}
-	
-	printf("osmLoad() end\n");
-	printf("tagName Addr: %p\n", &tagName);
+	printf("^%c[2K\r", 27); // clear console line
+	printf("loading... (%.5f%%)", ((float)nodeCount / (float)ptrMapData->numNodes * 100.0f));
 	
 	// free used memory
+	free(lineBuffer);
 	free(getNode_valString);
 	free(tagName);
 }
@@ -155,8 +153,7 @@ void getTagName(char *src, char **dest)
 
 static inline void getNode(char *src, osm **osmData, int index)
 {
-	(*osmData)->nodes[index] = malloc(sizeof(node));
-	node *nptr = (*osmData)->nodes[index];
+	node *nptr = &(*osmData)->nodes[index];
 	
 	// id
 	char *valueStart = strstr(src, "id=") + 4;
@@ -211,20 +208,15 @@ void getBounds(char *src, osm **in)
 
 void osmFree(osm **osmData)
 {
+	printf("Cleaning up osmloader memory...\n");
 	// TODO: IMPLEMENT! -> clean up all memory used by osm struct and its children
-	way **ways = (*osmData)->ways;
-	for(int n = 0; n < (*osmData)->numWays; n++)
-	{
-		free(*(ways+n));
-	}
-	free(ways);
+	printf("\tCleaning ways...\n");
+	free((*osmData)->ways);
+	printf("\tCleaning nodes...\n");
+	free((*osmData)->nodes);
+	printf("\tCleaning relations...\n");
+	free((*osmData)->relations);
 
-	node **nodes = (*osmData)->nodes;
-	for(int n = 0; n < (*osmData)->numNodes; n++)
-	{
-		free(*(nodes+n));
-	}
-	free(nodes);
-	
 	free(*osmData);
+	printf("\tDone!\n");
 }

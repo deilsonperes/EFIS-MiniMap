@@ -1,6 +1,5 @@
-// /* standard headers */
+/* standard headers */
 #include <stdio.h>
-#include <stdbool.h>
 #include <math.h>
 #include <time.h>
 
@@ -65,10 +64,12 @@ osm *mapData;
 int main(int argc, char** argv)
 {    
     // Load OSM data
-    printf("MAIN\n");
-
+    if(argc != 2 || argv[1] == NULL)
+	{
+        argv[1] = "map3.osm";
+    }
     printf("Loading map data...\n");
-    osmLoad("map.osm", &mapData);
+    osmLoad(argv[1], &mapData);
 
     // Init SDL
     SDL_Window* sdl_window = NULL;
@@ -99,6 +100,7 @@ int main(int argc, char** argv)
     
 main_exit:
     SDL_Quit();
+    osmFree(&mapData);
     printf("Program end.\n");
     return 0;
 }
@@ -112,10 +114,6 @@ bool initSDL(SDL_Window** wnd)
         printf("SDL Error: %s\n", SDL_GetError());
         return false;
     }
-
-    //SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 0);
-    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
     // Create a window
     *wnd = SDL_CreateWindow(W_PARAMS); // W_PARAMS is defined in windowdefs.h
@@ -141,8 +139,6 @@ bool initOpenGL(SDL_Window* wnd, SDL_GLContext* ctx)
     
     glewExperimental = GL_TRUE;
     glewInit();
-
-    //glEnable(GL_CULL_FACE);
 
     glGenBuffers(1, &vtx_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, vtx_buffer);
@@ -174,7 +170,6 @@ void processKeys()
     pos_y += (keys[SDL_SCANCODE_UP] - keys[SDL_SCANCODE_DOWN]) * 0.01f;
     pos_z += (keys[SDL_SCANCODE_X] - keys[SDL_SCANCODE_Z]) * 0.01f;
     ang += (keys[SDL_SCANCODE_E] - keys[SDL_SCANCODE_Q]) * 0.01f;
-    //printf("%d %d %d %d %d %d\n", keys[SDL_SCANCODE_UP], keys[SDL_SCANCODE_LEFT], keys[SDL_SCANCODE_DOWN], keys[SDL_SCANCODE_RIGHT], keys[SDL_SCANCODE_Q], keys[SDL_SCANCODE_E]);
 }
 
 void glRenderLoop(SDL_Window* wnd)
@@ -191,31 +186,22 @@ void glRenderLoop(SDL_Window* wnd)
         return;
     }
 
-   // glClearColor(0.1, 0.1, 0.1, 1.0);
-
     int w, h, 
         lw = 0, 
-        lh = 0,
-        border_top,
-        border_left,
-        border_down,
-        border_right;
+        lh = 0;
     
-    float 
-        aspect,
-        f1, 
-        f2 = 0, 
-        f3 = 0;
-    mat4 model, view, projection;
+    float aspect;
+    glTranslatef(pos_x, pos_y, 1);
 
-    vec3 
-        pos = {0.0f, 0.0f, 0.0f},
-        axis = {0.0f, 1.0f, 0.0f};
+    mat4 model, view, projection;
     glm_mat4_identity(projection);
     glm_mat4_identity(view);
     glm_mat4_identity(model);
 
-    float cnt = 0;
+    vec3 
+        pos = {0.0f, 0.0f, 0.0f},
+        axis = {0.0f, 1.0f, 0.0f};
+
     while (1)
     {
         t_start = clock();
@@ -229,29 +215,28 @@ void glRenderLoop(SDL_Window* wnd)
             glViewport(0, 0, w, h);
             
             aspect = (float) w / (float) h;
+
+            glClearColor(0, 0, 0, 1);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            glBegin(GL_POINTS);
+            glColor4f(1,1,1,1);
+            
+            for(int n = 0; n < mapData->numNodes; n++)
+            {
+                node nptr = (mapData->nodes[n]);
+                glVertex2d(nptr.longitude, nptr.latitude);
+                glVertex2d(0, 0);
+            }
+            
+            glEnd();
+            SDL_GL_SwapWindow(wnd);
         }
 
-        glClearColor(0, 0, 0, 1);
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        glBegin(GL_POINTS);
-        glColor4f(1,1,1,1);
-        
-        for(int n = 0; n < mapData->numNodes; n++)
-        {
-            node *nptr = *(mapData->nodes + n);
-            glVertex2d(nptr->longitude, nptr->latitude);
-        }
-        
-        glEnd();
-
-        cnt+=0.000001f;
-        
-        SDL_GL_SwapWindow(wnd);
         t_dif_ms = t_start - clock() / CLOCKS_PER_MSEC;
-        // if(t_dif_ms < CLOCKS_PER_MSEC * 16)
-        // {
-        //     SDL_Delay(16 - t_dif_ms);
-        // }
+        if(t_dif_ms < CLOCKS_PER_MSEC * 16)
+        {
+            SDL_Delay(16 - t_dif_ms);
+        }
     }
 }

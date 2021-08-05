@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(MiniMap)
+project(MiniMap C)
 
 set(PN ${PROJECT_NAME})
 

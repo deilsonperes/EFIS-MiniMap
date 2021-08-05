@@ -1,6 +1,8 @@
 #include "glutils.h"
 
 #include <stdio.h>
+#include <malloc.h>
+#include <string.h>
 #include <errno.h>
 #include "GL/glew.h"
 #include "GL/GL.h"
@@ -28,7 +30,7 @@ int mgl_compileProgram(char* vertexSource, char* fragmentSource)
 	if(glCompileStatus == GL_FALSE)
 	{
 		GLint glLogLength = 0;
-		GLchar *glLog = malloc(sizeof(GLchar) * glLogLength);
+		GLchar *glLog = (GLchar*) malloc(sizeof(GLchar) * glLogLength);
 		glGetProgramiv(glProgram, GL_INFO_LOG_LENGTH, &glLogLength);
 		glGetProgramInfoLog(glProgram, glLogLength, NULL, glLog);
 		printf("Error linking shader program: %s\n", glLog);
@@ -52,7 +54,6 @@ int mgl_compileShader(GLenum shader_type, char* source_file)
 	mgl_shaderSource *src = mgl_loadShaderFile(source_file);
 	
 	// Compile
-	printf("ok\n");
 	GLuint shader = glCreateShader(shader_type);
 	glShaderSource(shader, 1, &src->src, NULL);
 	glCompileShader(shader);
@@ -64,7 +65,7 @@ int mgl_compileShader(GLenum shader_type, char* source_file)
 	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
 	if(comp_status == GL_FALSE)
 	{
-		GLchar* compile_log = malloc(sizeof(char) * log_length);
+		char* compile_log = (char*) malloc(sizeof(char) * log_length);
 		glGetShaderInfoLog(shader, log_length, NULL, compile_log);
 		printf(" ---- Compile log ----\n%s ----     end     ----\n", compile_log);
 		free(compile_log);
@@ -88,13 +89,14 @@ mgl_shaderSource* mgl_loadShaderFile(char* filename)
 	fseek(fptr, 0, SEEK_END);
 	fpos_t size = ftell(fptr) + 1; // account for null byte at the end
 	rewind(fptr);
+	
 	char *source = malloc(size);
 
 	fread(source, sizeof(char), size, fptr);
 	source[size - 1] = '\0'; // add null byte at end of array
 	fclose(fptr);
 
-	mgl_shaderSource *s = malloc(sizeof(mgl_shaderSource));
+	mgl_shaderSource *s = (mgl_shaderSource*) malloc(sizeof(mgl_shaderSource));
 	s->src = source;
 	s->size = size;
 	return s;

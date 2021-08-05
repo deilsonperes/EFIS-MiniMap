@@ -25,11 +25,11 @@ typedef struct {
 	float 		longitude;	// decimal number ≥ −180.0000000 and ≤ 180.0000000 with 7 decimal places
 	//TODO: implement tags in nodes later
  //tag** 		tags;			// A set of key/value pairs, with unique key
-} node;
+} node; // 16 bytes per node
 
 typedef struct {
 	long long	id;
-	node**		nodes;
+	node*		nodes;
    //TODO: implement tags in ways later
  //tag**			tags;
 } way;
@@ -38,11 +38,12 @@ typedef struct {
 // TODO: implement remaining items
 typedef struct relation {
 	long long int id;
-	way **ways;
-	node **nodes;
+	way *ways;
+	node *nodes;
 } relation;
 
 typedef struct {
+	/* bounds */
 	float	minLat, 
 			minLon, 
 			maxLat, 
@@ -50,16 +51,16 @@ typedef struct {
 			deltaLat,
 			deltaLon;
 	
-	way **ways;
+	way *ways;
 	int numWays;
 	
-	node **nodes;
+	node *nodes;
 	int numNodes;
 	
-	tag **tags;
+	tag *tags;
 	int numTags;
 
-	relation **relations;
+	relation *relations;
 	int numRelations;
 } osm;
 
