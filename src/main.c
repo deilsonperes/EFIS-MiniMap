@@ -58,11 +58,14 @@ float
 
 // 
 osm *mapData;
+volatile bool renderThreadRun = true;
 /* Global variables end*/
 
 /* Program Entry */
+#include <string.h>
+#include "strhash.h"
 int main(int argc, char** argv)
-{    
+{
     // Load OSM data
     if(argc != 2 || argv[1] == NULL)
 	{
@@ -70,6 +73,7 @@ int main(int argc, char** argv)
     }
     printf("Loading map data...\n");
     osmLoad(argv[1], &mapData);
+    return 0;
 
     // Init SDL
     SDL_Window* sdl_window = NULL;
@@ -97,8 +101,11 @@ int main(int argc, char** argv)
         
         SDL_Delay(5);
     }
-    
+
 main_exit:
+    renderThreadRun = false;
+    SDL_WaitThread(sdl_t, (void*) NULL);
+    printf("Waiting for render thread to finish...\n");
     SDL_Quit();
     osmFree(&mapData);
     printf("Program end.\n");
@@ -202,7 +209,7 @@ void glRenderLoop(SDL_Window* wnd)
         pos = {0.0f, 0.0f, 0.0f},
         axis = {0.0f, 1.0f, 0.0f};
 
-    while (1)
+    while (renderThreadRun)
     {
         t_start = clock();
         glUseProgram(glShaderProgram);
@@ -239,4 +246,5 @@ void glRenderLoop(SDL_Window* wnd)
             SDL_Delay(16 - t_dif_ms);
         }
     }
+    printf("Render thread ended.\n");
 }

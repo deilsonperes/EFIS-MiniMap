@@ -13,7 +13,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/vendor/glew/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/headers")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-add_executable(${PN} src/main.c src/glutils.c src/osmloader.c)
+add_executable(${PN} src/main.c src/glutils.c src/osmloader.c src/strhash.c)
 target_link_libraries(
     ${PN}
         ${SDL2}
