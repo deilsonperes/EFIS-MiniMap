@@ -8,22 +8,14 @@
 /* global variables */
 char *getNode_valString;
 
-void getTagName(char*, char**);
-void getBounds(char*, osm**);
-static inline void getNode(char*, osm**, int);
-static inline void getWay(FILE*, char*, osm**, int);
+void getBounds(char*, osm*);
+static inline void getNode(char*, osm*, int);
+static inline void getWay(FILE*, char*, osm*, int);
+static inline unsigned long long getOSMValueULL(const char *, const char *);
+static inline long double getOSMValueLD(const char *, const char *);
 
 void osmLoad(char* fileName, osm **mapData)
 {
-	time_t time = clock();
-	*mapData = (osm*) malloc(sizeof(osm));
-	osm *ptrMapData = *mapData;
-	ptrMapData->numNodes = 0;
-	ptrMapData->numWays = 0;
-	ptrMapData->numTags = 0;
-	ptrMapData->numRelations = 0;
-
-	printf("Loading OSM data from file '%s'.\n", fileName);
 	FILE* osm_file = fopen(fileName, "rb");
 	if(osm_file == NULL)
 	{
@@ -31,74 +23,82 @@ void osmLoad(char* fileName, osm **mapData)
 		return;
 	}
 
+	printf("Loading OSM data from file '%s'.\n", fileName);
+	time_t time = clock();
+
+	*mapData = (osm*) malloc(sizeof(osm));
+	osm *ptrMapData = *mapData;
+	ptrMapData->numNodes 		= 0;
+	ptrMapData->numWays 			= 0;
+	ptrMapData->numTags 			= 0;
+	ptrMapData->numRelations 	= 0;
+
 	getNode_valString = (char*) calloc(32, sizeof(char));
-	char *lineBuffer = (char*) calloc(1024, sizeof(char)),
-		  *tagStart,
-		  *tagName = (char*) calloc(32, sizeof(char)),
-		  
-		  *valueStart;
-	
-	int nodeMemCount = 1000,
-		 wayMemCount = 1000,
-		 relationMemCount = 1000,
-		 tagMemCount = 1000,
-		 progCnt = 100;
+	char *lineBuffer 	= (char*) calloc(1024, sizeof(char)),
+		  *tagName 		= (char*) calloc(32, sizeof(char)),
+		  *tagStart,*valueStart;
+
+	int numNodeAlloc		= 1000,
+		 numWayAlloc 		= 1000,
+		 numRelationAlloc = 1000,
+		 numTagAlloc 		= 1000;
 
 	// allocate memory for structs
-	ptrMapData->nodes = (node*) malloc(sizeof(node) * nodeMemCount);
-	ptrMapData->ways = (way*) malloc(sizeof(way) * wayMemCount);
-	ptrMapData->relations = (relation*) malloc(sizeof(relation) * relationMemCount);
-	ptrMapData->tags = (tag*) malloc(sizeof(tag) * tagMemCount);
-	getNode_valString = (char*) calloc(64, sizeof(char));
+	ptrMapData->nodes 	 = (node*) malloc(sizeof(node) * numNodeAlloc);
+	ptrMapData->ways 		 = (way*) malloc(sizeof(way) * numWayAlloc);
+	ptrMapData->relations = (relation*) malloc(sizeof(relation) * numRelationAlloc);
+	ptrMapData->tags 		 = (tag*) malloc(sizeof(tag) * numTagAlloc);
+	getNode_valString 	 = (char*) calloc(64, sizeof(char));
 
-	fgets(lineBuffer, 1024, osm_file);
-	while(!feof(osm_file))
+	while(1)
 	{
-		if(tagStart = strstr(lineBuffer, "<"))
+		fgets(lineBuffer, 1024, osm_file);
+		if(feof(osm_file))
+		{
+			break;
+		}
+		if(tagStart = strstr(lineBuffer, "<") + 1)
 		{
 			// if next char is '/' this is a tag ending
 			if(tagStart[1] == '/')
 			{
 				;//printf("Tag ending: %s", lineBuffer);
 			} else {
-				getTagName(tagStart, &tagName);
-				if(!strcmp(tagName, "bounds"))
+				if(!strncmp(tagStart, "bounds", 6))
 				{
-					getBounds(tagStart, &ptrMapData);
+					getBounds(tagStart, ptrMapData);
 				} else
-				if(!strcmp(tagName, "node"))
+				if(!strncmp(tagStart, "node", 4))
 				{
-					if(ptrMapData->numNodes >= nodeMemCount)
+					// TODO: implement
+					// check if there is enough memory
+					if(ptrMapData->numNodes >= numNodeAlloc)
 					{
-						nodeMemCount += 1000;
-						ptrMapData->nodes = (node*) realloc(ptrMapData->nodes, sizeof(node) * nodeMemCount);
+						numNodeAlloc += 1000;
+						ptrMapData->nodes = realloc(ptrMapData->nodes, numNodeAlloc * sizeof(node));
 					}
-					getNode(lineBuffer, &ptrMapData, ptrMapData->numNodes++);
+					getNode(lineBuffer, ptrMapData, ptrMapData->numNodes++);
 				} else
-				if(!strcmp(tagName, "way"))
+				if(!strncmp(tagStart, "way", 3))
 				{
-					if(ptrMapData->numWays >= wayMemCount)
+					if(ptrMapData->numWays >= numWayAlloc)
 					{
-						wayMemCount += 1000;
-						ptrMapData->numWays = wayMemCount;
-						ptrMapData->ways = realloc(ptrMapData->ways, sizeof(way) * wayMemCount);
+						numWayAlloc += 1000;
+						ptrMapData->ways = (way*) realloc(ptrMapData->ways, numWayAlloc);
 					}
-					getWay(osm_file, lineBuffer, &ptrMapData, ptrMapData->numWays);
+					getWay(osm_file,lineBuffer, ptrMapData, ptrMapData->numWays++);
 				} else
-				if(!strcmp(tagName, "relation"))
+				if(!strncmp(tagName, "relation", 8))
 				{
 					ptrMapData->numRelations++;
 				} else
-				if(!strcmp(tagName, "tag"))
+				if(!strncmp(tagName, "tag", 3))
 				{
 					ptrMapData->numTags++;
 				}
 			}
 		} else
 			printf("Broken line: %s", lineBuffer);
-
-		// read new line here to avoid missing feof()
-		fgets(lineBuffer, 512, osm_file);
 	}
 	
 	printf("Nodes: %d | Ways: %d | Relations: %d\n", ptrMapData->numNodes, ptrMapData->numWays, ptrMapData->numRelations);
@@ -111,88 +111,127 @@ void osmLoad(char* fileName, osm **mapData)
 	printf("Loading took %lldms\n", time);
 }
 
-void getTagName(char *src, char **dest)
+static inline unsigned long long getOSMValueULL(const char *src, const char *key)
 {
-	while(*src == '<' || *src == '/')
-		src++;
-	memset(*dest, 0, 32);
-	strncpy(*dest, src, strstr(src, " ") - src);
+	static char buffer[64];
+	if(src == 0 || key == 0 || src[0] == 0 || key[0] == 0)
+	{
+		printf("Error: invalid query.(src:%s, key:%s)\n", src, key);
+		return 0;
+	}
+
+	char *start = strstr(src, key);
+	if(start == 0)
+	{
+		printf("key '%s' not found\n", key);
+		return 0;
+	}
+	start += strlen(key) + 2;
+	char *end = strstr(start, "\"");
+
+	return strtoull(start, &end, 10);
 }
 
-static inline void getNode(char *src, osm **osmData, int index)
+static inline long double getOSMValueLD(const char *src, const char *key)
 {
-	node *nptr = &(*osmData)->nodes[index];
-	
-	// id
-	char *valueStart = strstr(src, "id=") + 4;
-	int valLength = strstr(valueStart, "\"") - valueStart;
-	strncpy(getNode_valString, valueStart, valLength);
-	nptr->id = atoll(getNode_valString);
-	
-	// lat
-	valueStart = strstr(src, "lat=") + 5;
-	valLength = strstr(valueStart, "\"") - valueStart;
-	strncpy(getNode_valString, valueStart, valLength);
-	nptr->latitude = 2 * ((atof(getNode_valString) - (*osmData)->minLat) / (*osmData)->deltaLat) - 1;
-	
-	// lon
-	valueStart = strstr(src, "lon=") + 5;
-	valLength = strstr(valueStart, "\"") - valueStart;
-	strncpy(getNode_valString, valueStart, valLength);
-	nptr->longitude = 2 * ((atof(getNode_valString) - (*osmData)->minLon) / (*osmData)->deltaLon) - 1;
+	static char buffer[64];
+	if(src == 0 || key == 0 || src[0] == 0 || key[0] == 0)
+	{
+		printf("Error: invalid query.(src:%s, key:%s)\n", src, key);
+		return 0;
+	}
+
+	char *start = strstr(src, key);
+	if(start == 0)
+	{
+		printf("key '%s' not found\n", key);
+		return 0;
+	}
+	start += strlen(key) + 2;
+	char *end = strstr(start, "\"");
+
+	return strtod(start, &end);
 }
 
-static inline void getWay(FILE *osmFile, char* lineBuffer, osm **mapData, int index)
+void getBounds(char *src, osm *in)
 {
-	// a pointer to the list of ways
-	way *wayList = (*mapData)->ways;
-	int *numWays = &(*mapData)->numWays;
-	*numWays += 1;
-	int nodesMemCount = 100;
+	in->minLat = getOSMValueLD(src, "minlat");
+	in->minLon = getOSMValueLD(src, "minlon");
+	in->maxLat = getOSMValueLD(src, "maxlat");
+	in->maxLon = getOSMValueLD(src, "maxlon");
+	
+	in->deltaLat = in->maxLat - in->minLat;
+	in->deltaLon = in->maxLon - in->minLon;
 
-	// allocate initial quantity of memory to be used
+	printf("Bounds:\n\tminLat: %lf\n\tminLon: %lf\n\tmaxLat: %lf\n\tmaxLon: %lf\n\tdLat: %lf\n\tdLon: %lf\n", in->minLat, in->minLon, in->maxLat, in->maxLon, in->deltaLat, in->deltaLon);
+}
 
+static inline void getNode(char *src, osm *osmData, int index)
+{
+	node *thisNode = &osmData->nodes[index];
+	thisNode->id = getOSMValueULL(src, "id");
+	thisNode->latitude = 2.0f * ((getOSMValueLD(src, "lat") - osmData->minLat) / osmData->deltaLat) - 1.0f;
+	thisNode->longitude = 2.0f * ((getOSMValueLD(src, "lon") - osmData->minLon) / osmData->deltaLon) - 1.0f;
+}
 
-	// go through the lines until </node>
+static inline void getWay(FILE *osmFile, char* lineBuffer, osm *mapData, int index)
+{
+	unsigned int numNodeAlloc = 100;
+	id_t currId = 0;
+
+	mapData->ways[index].nodes = malloc(numNodeAlloc * sizeof(node*));
+	node **nodeList = mapData->ways[index].nodes;
+	int *numNodes = &mapData->ways[index].numNodes;
+	*numNodes = 0;
+
 	while(!strstr(lineBuffer, "</way>"))
 	{
-		if(!strstr(lineBuffer, "<nd "))
+		if(strstr(lineBuffer, "<nd"))
 		{
-			
+			if(*numNodes >= numNodeAlloc)
+			{
+				numNodeAlloc += 100;
+				nodeList = realloc(nodeList, numNodeAlloc * sizeof(node*));
+				if(nodeList == NULL)
+				{
+					printf("ERROR ALLOCATING MEMORY");
+					_pause
+				}
+			}
+
+			currId = getOSMValueULL(lineBuffer, "ref");
+
+			for(int n = 0; n < mapData->numNodes; n++)
+			{
+				if(mapData->nodes[n].id == currId)
+				{
+					nodeList[*numNodes] = &mapData->nodes[n];
+					*numNodes += 1;
+					//printf("found node %d: (%llu<%Lf>)\n", *numNodes, mapData->nodes[n].id, mapData->nodes[n].latitude);
+					//_pause
+				}
+			}
+		} else
+		if(strstr(lineBuffer, "<way"))
+		{
+			mapData->ways[index].id = getOSMValueULL(lineBuffer, "id");
 		}
 		fgets(lineBuffer, 1024, osmFile);
+		if(feof(osmFile)) break;
 	}
+	*numNodes -= 1;
+	nodeList = realloc(nodeList, *numNodes * sizeof(node*));
 }
 
-void getBounds(char *src, osm **in)
+void osmPrintWay(way *wayptr)
 {
-	char *valueStart = strstr(src, "minlat=") + 8;
-	int valLength = strstr(valueStart, "\"") - valueStart;
-	strncpy(getNode_valString, valueStart, valLength);
-	(*in)->minLat = atof(getNode_valString);	
-	memset(getNode_valString, 0, valLength);
- 
-	valueStart = strstr(src, "maxlat=") + 8;
-	valLength = strstr(valueStart, "\"") - valueStart;
-	strncpy(getNode_valString, valueStart, valLength);
-	(*in)->maxLat = atof(getNode_valString);
-	memset(getNode_valString, 0, valLength);
-
-	valueStart = strstr(src, "minlon=") + 8;
-	valLength = strstr(valueStart, "\"") - valueStart;
-	strncpy(getNode_valString, valueStart, valLength);
-	(*in)->minLon = atof(getNode_valString);
- 	memset(getNode_valString, 0, valLength);
-
-	valueStart = strstr(src, "maxlon=") + 8;
-	valLength = strstr(valueStart, "\"") - valueStart;
-	strncpy(getNode_valString, valueStart, valLength);
-	(*in)->maxLon = atof(getNode_valString);
-
-	(*in)->deltaLat = (*in)->maxLat - (*in)->minLat;
-	(*in)->deltaLon = (*in)->maxLon - (*in)->minLon;
-
-	printf("Bounds:\n\tminLat: %lf\n\tminLon: %lf\n\tmaxLat: %lf\n\tmaxLon: %lf\n\tdLat: %lf\n\tdLon: %lf\n", (*in)->minLat, (*in)->minLon, (*in)->maxLat, (*in)->maxLon, (*in)->deltaLat, (*in)->deltaLon);
+	printf("Way '%llu':\n", wayptr->id);
+	node *nd = *wayptr->nodes;
+	for(int n = 0; n < wayptr->numNodes; n++)
+	{
+		printf("\t%llu: <%Lf, %Lf>,\n", nd->id, nd->longitude, nd->latitude);
+		nd++;
+	}
 }
 
 /* TODO: implement properly */

@@ -62,19 +62,16 @@ volatile bool renderThreadRun = true;
 /* Global variables end*/
 
 /* Program Entry */
-#include <string.h>
-#include "strhash.h"
 int main(int argc, char** argv)
 {
     // Load OSM data
     if(argc != 2 || argv[1] == NULL)
 	{
-        argv[1] = "map3.osm";
+        argv[1] = "map.osm";
     }
     printf("Loading map data...\n");
     osmLoad(argv[1], &mapData);
-    return 0;
-
+  
     // Init SDL
     SDL_Window* sdl_window = NULL;
     if(!initSDL(&sdl_window))
@@ -226,14 +223,33 @@ void glRenderLoop(SDL_Window* wnd)
             glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT);
 
-            glBegin(GL_POINTS);
+            way *wy = mapData->ways;
+            node **nd;
             glColor4f(1,1,1,1);
-            
-            for(int n = 0; n < mapData->numNodes; n++)
+            glBegin(GL_LINES);
+            /*
+            for(int n = 0; n < mapData->numNodes - 1; n++)
             {
-                node nptr = (mapData->nodes[n]);
-                glVertex2d(nptr.longitude, nptr.latitude);
-                glVertex2d(0, 0);
+                node * nd = &mapData->nodes[n];
+                glVertex2d(nd->longitude, nd->latitude);
+                nd = &mapData->nodes[n+1];
+                glVertex2d(nd->longitude, nd->latitude);
+            }
+            */
+            for(int nw = 0; nw < mapData->numWays; nw++)
+            {
+                nd = wy->nodes;
+                // osmPrintWay(wy);
+                int lim = (wy->numNodes % 2 == 0? wy->numNodes: wy->numNodes - 1);
+                printf("%d -> %d\n", wy->numNodes, lim);
+                if(lim < 2) continue;
+                for(int nn = 0; nn < lim; nn++)
+                {
+                    glVertex2d((*nd)->longitude, (*nd)->latitude);
+                    nd++;
+                    glVertex2d((*nd)->longitude, (*nd)->latitude);
+                }
+                wy++;
             }
             
             glEnd();

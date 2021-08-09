@@ -23,18 +23,18 @@ typedef struct tag {
  */
 typedef struct node {
 	id_t	id;			// 64-bit integer number ≥ 1
-	float latitude;	// decimal number ≥ −90.0000000 and ≤ 90.0000000 with 7 decimal places
-	float longitude;	// decimal number ≥ −180.0000000 and ≤ 180.0000000 with 7 decimal places
+	long double latitude;	// decimal number ≥ −90.0000000 and ≤ 90.0000000 with 7 decimal places
+	long double longitude;	// decimal number ≥ −180.0000000 and ≤ 180.0000000 with 7 decimal places
 	//TODO: implement tags in nodes later
  //tag** 		tags;			// A set of key/value pairs, with unique key
 } node; // 16 bytes per node
 
 typedef struct way {
-	id_t	id;
-	int 	numNodes;		// Number of nodes in this way
-	node*	nodes;			// array of pointers to nodes that belong in this way
+	id_t	 id;
+	int	 numNodes;		// Number of nodes in this way
+	node **nodes;			// array of pointers to nodes that belong in this way
    //TODO: implement tags in ways later
- //tag**			tags;
+ 	//tag**			tags;
 } way;
 
 // TODO: implement remaining items
@@ -67,6 +67,7 @@ typedef struct osm {
 } osm;
 
 void osmLoad(char* fileName, osm **mapData);
+void osmPrintWay(way *wayptr);
 void osmCacheSave(char* cacheFileName, osm* mapData);
 void osmFree(osm **osmData);
 
